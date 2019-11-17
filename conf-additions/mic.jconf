@@ -1,0 +1,24 @@
+-input mic
+-htkconf wav_config
+-h ENVR-v5.3.am
+-hlist ENVR-v5.3.phn
+-d ENVR-v5.3.lm
+-v ENVR-v5.3.dct
+-b 4000
+-lmp 12 -6
+-lmp2 12 -6
+-fallback1pass
+-multipath
+-iwsp
+-iwcd1 max
+-spmodel sp
+-no_ccd
+-sepnum 150
+-b2 360
+-n 40
+-s 2000
+-m 8000
+-lookuprange 5
+-sb 80
+-forcedict
+
