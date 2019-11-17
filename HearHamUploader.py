@@ -192,15 +192,6 @@ class MainWin:
     def onDelete(self, window, event):
         self.recog.proc.kill()
         Gtk.main_quit()
-        
-        
-#TODO  pulseaudiocontrol and https://www.youtube.com/watch?v=RSeINGM68A8
-#pactl load-module module-loopback
-
-#pactl unload-module module-loopback
-
-#julius/julius/julius -C mic.jconf -dnnconf dnn.jconf
-
 
 if __name__ == '__main__':
     app = MainWin()
