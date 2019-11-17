@@ -58,7 +58,7 @@ class MainWin:
         self.uploadkey = None
         self.isconnected = None
         self.VERSION = '0.0.1'
-        self.SENDDOMAIN = 'http://hearham.com/'
+        self.SENDDOMAIN = 'https://hearham.com/'
         self.recog = Recognizer(self)
         self.recog.start()
         self.builder = Gtk.Builder()
