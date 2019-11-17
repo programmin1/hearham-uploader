@@ -140,10 +140,10 @@ class MainWin:
     
     def chooseUpload(self,obj):
         d = Gtk.MessageDialog(self.window,
-                          0,
-                          Gtk.MessageType.QUESTION,
-                          Gtk.ButtonsType.OK,
-                          'Enter upload code:')
+              0,
+              Gtk.MessageType.QUESTION,
+              Gtk.ButtonsType.OK,
+              'Enter upload code:')
         entry = Gtk.Entry()
         entry.show()
         d.vbox.pack_end( entry, 1, 1, 10)
@@ -176,7 +176,7 @@ class MainWin:
         content =  resource.read().decode('utf-8')
         jsonval = json.loads(content)
         #name and frequency...
-        self.builder.get_object('labelStation').set_text(jsonval['name'])
+        self.builder.get_object('labelStation').set_text(jsonval['name']+"\nMust be set to\n"+str(int(jsonval['frequency'])/1E6)+"M")
         #Success!
         self.uploadkey = key
     
