@@ -24,7 +24,11 @@ class Recognizer(Thread):
         
     def run(self):
         cfg = self.config['julia']
-        cmd = [cfg['juliabinary'], '-C', cfg['jconffile'], '-dnnconf', cfg['dnnconffile']]
+        cmd = [cfg['juliabinary'], '-C', cfg['jconffile']]
+        if 'dnnconffile' in cfg:
+            cmd.append( '-dnnconf' )
+            cmd.append(cfg['dnnconffile'])
+        
         self.proc = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
@@ -58,7 +62,7 @@ class MainWin:
         self.uploadkey = None
         self.isconnected = None
         self.VERSION = '0.0.1'
-        self.SENDDOMAIN = 'https://hearham.com/'
+        self.SENDDOMAIN = self.config['http']['uploadto']
         self.recog = Recognizer(self)
         self.recog.start()
         self.builder = Gtk.Builder()
@@ -88,12 +92,23 @@ class MainWin:
                 self.initReporting()
             else:
                 self.config['reporting'] = {'sentry':False}
-            with open('hear.config','w') as conffile:
-                self.config.write(conffile)
+            self.writeConf()
             dialog.destroy()
+            
+        try:
+            if self.config['http']['uploadsecret']:
+                self.getStation(self.config['http']['uploadsecret'])
+        except KeyError:
+            print('No uploading')
+            
                 
         #pabutton = self.builder.get_object("buttonConfAudio")
         self.window.set_size_request(600,300)
+        
+    def writeConf(self):
+        """ Writes config preferences to file. """
+        with open('hear.config','w') as conffile:
+            self.config.write(conffile)
         
     def initReporting(self):
         import sentry_sdk
@@ -117,7 +132,7 @@ class MainWin:
     def helpBtn(self,obj):
         dialog = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.INFO,
             Gtk.ButtonsType.OK, "Hearham uploader version "+self.VERSION+"\n"+
-               "For help please see "+self.SENDDOMAIN+"help.\n"
+               "For help please see "+self.SENDDOMAIN+"/help.\n"
                "User interface by Luke Bryan\nCode and Models under MPL License.\nFor information about Julius recognizer see https://github.com/julius-speech/julius")
         response = dialog.run()
         dialog.destroy()
@@ -155,6 +170,8 @@ class MainWin:
         if r == Gtk.ResponseType.OK:
             try:
                 self.getStation(text)
+                self.config['http']['uploadsecret'] = text
+                self.writeConf()
             except HTTPError:
                 dialog = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.WARNING,
                     Gtk.ButtonsType.OK, "Invalid key, please try again")
