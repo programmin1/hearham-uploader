@@ -15,6 +15,7 @@ import urllib.request
 from urllib.error import HTTPError
 from urllib.error import URLError
 import json
+import re
 
 class Recognizer(Thread):
     def __init__(self, parent):
@@ -54,6 +55,25 @@ class Recognizer(Thread):
         #Binary finished
         GLib.idle_add(self.parent.disconnected)
         
+class RTLSDRRun(Thread):
+    def __init__(self, cmd, parent):
+        Thread.__init__(self)
+        self.config = parent.config
+        self.cmd = cmd
+        self.parent = parent
+        
+    def run(self):
+        #cmd = 'rtl_fm -M fm -f '+self.freq+'M -l 202 | play -r 24k -t raw -e s -b 16 -c 1 -V1 -'
+        cmds = self.cmd.split('|')
+        self.proc = subprocess.Popen(cmds[0].split(),
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+        subprocess.check_output(cmds[1].split(),stdin=self.proc.stdout)
+        for line in iter(self.proc.stdout.readline, b''):
+            line = line.decode('utf-8')
+            print(line)
+
+        
 
 class MainWin:
     def __init__(self):
@@ -61,6 +81,7 @@ class MainWin:
         self.config.read('hear.config')
         self.uploadkey = None
         self.isconnected = None
+        self.rtllistener = None
         self.VERSION = '0.0.1'
         self.SENDDOMAIN = self.config['http']['uploadto']
         self.recog = Recognizer(self)
@@ -74,7 +95,9 @@ class MainWin:
             'chooseUpload' : self.chooseUpload,
             'help' : self.helpBtn,
             'loopbackOn' : self.loopbackOn,
-            'loopbackOff' : self.loopbackOff
+            'loopbackOff' : self.loopbackOff,
+            'playRTLSDR' : self.playRTLSDR,
+            'stopRTLSDR' : self.stopRTLSDR
 		})
         self.window = self.builder.get_object("hearhamwindow")
         self.window.show_all()
@@ -94,6 +117,17 @@ class MainWin:
                 self.config['reporting'] = {'sentry':False}
             self.writeConf()
             dialog.destroy()
+            
+        #Try listening and uploading:
+        try:
+            if self.config['RTLSDR']['cmd']:
+                self.rtllistener = RTLSDRRun( self.config['RTLSDR']['cmd'], self )
+                self.rtllistener.start()
+                nums = re.compile(r"[+-]?\d+(?:\.\d+)?")
+                frequency = nums.search(self.config['RTLSDR']['cmd']).group(0)
+                self.builder.get_object('freqEntry').set_text( frequency )
+        except KeyError:
+            print('No RTLSDR setting')
             
         try:
             if self.config['http']['uploadsecret']:
@@ -205,9 +239,25 @@ class MainWin:
         }).encode())
         content =  resource.read().decode('utf-8')
         return content
+        
+    def playRTLSDR(self, obj):
+        if self.rtllistener:
+            self.rtllistener.proc.kill()
+        cmd = 'rtl_fm -M fm -f '+self.builder.get_object('freqEntry').get_text()+'M -l 202 | play -r 24k -t raw -e s -b 16 -c 1 -V1 -'
+        print(cmd)
+        self.config['RTLSDR'] = {'cmd' : cmd }
+        self.writeConf()
+        self.rtllistener = RTLSDRRun( cmd, self )
+        self.rtllistener.start()
+        
+    def stopRTLSDR(self, obj):
+        if self.rtllistener:
+            self.rtllistener.proc.kill()
     
     def onDelete(self, window, event):
         self.recog.proc.kill()
+        if self.rtllistener:
+            self.rtllistener.proc.kill()
         Gtk.main_quit()
 
 if __name__ == '__main__':
